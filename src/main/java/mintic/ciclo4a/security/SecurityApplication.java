@@ -19,7 +19,7 @@ public class SecurityApplication {
 		SpringApplication.run(SecurityApplication.class, args);
 	}
 
-	@Bean
+	/*@Bean
 	CommandLineRunner runner(UserRepository repository, MongoTemplate mongoTemplate) {
 		return args -> {
 			String email = "pepitoelmasbonito@email.com";
@@ -44,7 +44,7 @@ public class SecurityApplication {
 			}
 
 		};
-	}
+	}*/
 
 	private void withMongoAndQuery(UserRepository repository, MongoTemplate mongoTemplate, User user, String email) {
 		Query query = new Query();

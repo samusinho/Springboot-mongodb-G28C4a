@@ -11,6 +11,6 @@ public interface UserRepository
         extends MongoRepository<User, String> {
     Optional<User> findUserByEmail(String email);
 
-    @Query("{'nick': {'$regex': ?0 }}")
-    List<User> findByRegexpUsername(String nick);
+    @Query(value = "{'nick': {'$regex': ?0 }}", fields = "{ 'password': 0 }")
+    List<User> findByRegexpNick(String nick);
 }
