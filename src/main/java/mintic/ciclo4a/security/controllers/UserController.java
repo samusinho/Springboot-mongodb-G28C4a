@@ -1,38 +1,64 @@
 package mintic.ciclo4a.security.controllers;
 
 import lombok.AllArgsConstructor;
+import mintic.ciclo4a.security.models.Role;
 import mintic.ciclo4a.security.models.User;
+import mintic.ciclo4a.security.repositories.RoleRepository;
 import mintic.ciclo4a.security.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @AllArgsConstructor
 @RestController
 @RequestMapping("/users")
-public class UserController {
+public class UserController implements UserDetailsService {
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("Usuario no encontrado");
+        }
+        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(user.getRole().getName().toString()));
+        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(), authorities);
+    }
+
 
     // PostMapping -> Método POST
     // "" -> "/users"
     @PostMapping("")
-    User createUser(@RequestBody User user) {
+    User createUser(@RequestBody User user, @RequestParam("roleId") Optional<String> roleId) {
+        Role role = null;
+        if (roleId.isPresent()) {
+            role = roleRepository.findById(roleId.get())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El rol no existe"));
+        }
+        user.setRole(role);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
     // GetMapping -> Método GET
     // "" -> "/users"
     @GetMapping("")
-    ResponseEntity<List<User>> getUsers(@RequestParam("nick") Optional<String> nick) {
-        if (nick.isPresent()) {
-            return ResponseEntity.status(200).body(userRepository.findByRegexpNick(nick.get()));
-            // return userRepository.findByRegexpNick(nick.get());
+    ResponseEntity<List<User>> getUsers(@RequestParam("username") Optional<String> username) {
+        if (username.isPresent()) {
+            return ResponseEntity.status(200).body(userRepository.findByRegexpUsername(username.get()));
         }
-
         return ResponseEntity.status(200).body(userRepository.findAll());
     }
 
@@ -44,17 +70,24 @@ public class UserController {
     }
 
     @DeleteMapping("{userId}")
-    ResponseEntity<String> deleteUser(@PathVariable("userId") String userId) {
+    ResponseEntity<Object> deleteUser(@PathVariable("userId") String userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario no existe"));
         userRepository.delete(user);
-        return ResponseEntity.ok().body("El usuario " + user.getNick() + " Fue eliminado");
+        Map<String, String> data = new HashMap<>();
+        data.put("message", "Usuario " + user.getUsername() + " fue eliminado satisfactoriamente");
+        return new ResponseEntity<Object>(data, HttpStatus.ACCEPTED);
     }
 
     @PutMapping("{userId}")
-    User updateUser(@PathVariable String userId, @RequestBody User userinfo) {
+    User updateUser(@PathVariable String userId, @RequestBody User userinfo, @RequestParam("roleId") Optional<String> roleId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario no existe"));
-        user.setNick(userinfo.getNick());
-        user.setEmail(userinfo.getEmail());
+        if (userinfo.getUsername() != null) user.setUsername(userinfo.getUsername());
+        if (userinfo.getEmail() != null) user.setEmail(userinfo.getEmail());
+        if (roleId.isPresent()) {
+            Role role = roleRepository.findById(roleId.get())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rol no encontrado"));
+            user.setRole(role);
+        }
         return userRepository.save(user);
     }
 }
