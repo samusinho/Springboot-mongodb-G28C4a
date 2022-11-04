@@ -8,10 +8,13 @@ import mintic.ciclo4a.security.repositories.PermissionRepository;
 import mintic.ciclo4a.security.repositories.PermissionRoleRepository;
 import mintic.ciclo4a.security.repositories.RoleRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/permissions-roles")
@@ -78,5 +81,21 @@ public class PermissionRoleController {
         }
         return false;
     }
+
+    @DeleteMapping("{permissionRoleId}")
+    ResponseEntity<Object> deleteUser(@PathVariable("permissionRoleId") String permissionRoleId) {
+        PermissionRole permissionRole = permissionRoleRepository.findById(permissionRoleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El acceso no existe"));
+        permissionRoleRepository.delete(permissionRole);
+        Map<String, String> data = new HashMap<>();
+        data.put(
+                "message",
+                "Acceso " +
+                        permissionRole.getPermission().getUrl() + " " +
+                        permissionRole.getPermission().getMethod() + " " +
+                        " fue eliminado satisfactoriamente");
+        return new ResponseEntity<Object>(data, HttpStatus.ACCEPTED);
+    }
+
 
 }

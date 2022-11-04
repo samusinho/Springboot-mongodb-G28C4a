@@ -75,7 +75,7 @@ public class UserController implements UserDetailsService {
         userRepository.delete(user);
         Map<String, String> data = new HashMap<>();
         data.put("message", "Usuario " + user.getUsername() + " fue eliminado satisfactoriamente");
-        return new ResponseEntity<Object>(data, HttpStatus.ACCEPTED);
+        return new ResponseEntity<Object>(data, HttpStatus.OK);
     }
 
     @PutMapping("{userId}")
