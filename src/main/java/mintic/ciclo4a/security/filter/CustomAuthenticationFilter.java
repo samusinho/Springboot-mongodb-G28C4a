@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -33,10 +34,10 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
     @SneakyThrows
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
-        log.info(request.getReader().lines().collect(Collectors.joining()));
+        String credentials = request.getReader().lines().collect(Collectors.joining());
+        JSONObject body = new JSONObject(credentials);
+        String username = body.get("username").toString();
+        String password = body.get("password").toString();
 
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, password);
         return authenticationManager.authenticate(authenticationToken);
