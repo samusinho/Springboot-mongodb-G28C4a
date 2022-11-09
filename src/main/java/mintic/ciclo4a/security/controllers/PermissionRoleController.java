@@ -1,21 +1,36 @@
 package mintic.ciclo4a.security.controllers;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import mintic.ciclo4a.security.models.Permission;
 import mintic.ciclo4a.security.models.PermissionRole;
 import mintic.ciclo4a.security.models.Role;
+import mintic.ciclo4a.security.models.User;
 import mintic.ciclo4a.security.repositories.PermissionRepository;
 import mintic.ciclo4a.security.repositories.PermissionRoleRepository;
 import mintic.ciclo4a.security.repositories.RoleRepository;
+import mintic.ciclo4a.security.repositories.UserRepository;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/permissions-roles")
 @AllArgsConstructor
@@ -23,6 +38,8 @@ public class PermissionRoleController {
     private final PermissionRoleRepository permissionRoleRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+
+    private final UserRepository userRepository;
 
     @GetMapping("")
     List<PermissionRole> getAll() {
@@ -42,6 +59,41 @@ public class PermissionRoleController {
                 new ResponseStatusException(HttpStatus.NOT_FOUND)
         );
         return this.permissionRoleRepository.findByRole(role);
+    }
+
+    @PostMapping("verify")
+    ResponseEntity<Object> validatePermissionsByRole(HttpServletRequest request, @RequestBody Permission info) throws IOException {
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        Map<String, String> data = new HashMap<>();
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            try {
+                String token = authorizationHeader.substring("Bearer ".length()); // "Bearer <encrypted-token>"
+                Algorithm algorithm = Algorithm.HMAC256("secret".getBytes());
+                JWTVerifier verifier = JWT.require(algorithm).build();
+                DecodedJWT decodedJWT = verifier.verify(token);
+                String username = decodedJWT.getSubject();
+                User user = userRepository.findByUsername(username);
+                List<PermissionRole> accesses = this.permissionRoleRepository.findByRole(user.getRole());
+                for (int i = 0; i < accesses.size(); i++) {
+                    boolean hasAccess = accesses.get(i).getPermission().getMethod().equals(info.getMethod())
+                            && accesses.get(i).getPermission().getUrl().equals(info.getUrl());
+                    if (hasAccess) {
+                        data.put("message", "El usuario tiene acceso");
+                        return new ResponseEntity<Object>(data, HttpStatus.OK);
+                    }
+                }
+                data.put("message", "El usuario no tiene acceso al recurso solicitado");
+                return new ResponseEntity<Object>(data, HttpStatus.FORBIDDEN);
+            }
+            catch(Exception exception) {
+                log.error("Error {}", exception.getMessage());
+                data.put("message", exception.getMessage());
+                return new ResponseEntity<Object>(data, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            data.put("message", "No hay token");
+            return new ResponseEntity<Object>(data, HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @GetMapping("permission/{idPermission}")
@@ -83,7 +135,7 @@ public class PermissionRoleController {
     }
 
     @DeleteMapping("{permissionRoleId}")
-    ResponseEntity<Object> deleteUser(@PathVariable("permissionRoleId") String permissionRoleId) {
+    ResponseEntity<Object> deletePermission(@PathVariable("permissionRoleId") String permissionRoleId) {
         PermissionRole permissionRole = permissionRoleRepository.findById(permissionRoleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El acceso no existe"));
         permissionRoleRepository.delete(permissionRole);
