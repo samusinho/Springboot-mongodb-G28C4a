@@ -91,7 +91,7 @@ public class PermissionRoleController {
                 return new ResponseEntity<Object>(data, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } else {
-            data.put("message", "No hay token");
+            data.put("message", "No autorizado, inicia sesión!");
             return new ResponseEntity<Object>(data, HttpStatus.UNAUTHORIZED);
         }
     }
