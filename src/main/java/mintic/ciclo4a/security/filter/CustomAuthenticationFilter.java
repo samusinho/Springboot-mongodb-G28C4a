@@ -3,6 +3,7 @@ package mintic.ciclo4a.security.filter;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -58,10 +59,11 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
                 .withExpiresAt(new Date(System.currentTimeMillis() + 120*60*1000))
                 .withIssuer(request.getRequestURL().toString())
                 .sign(algorithm);
-        Map<String,String> tokens = new HashMap<>();
-        tokens.put("access_token", access_token);
-        tokens.put("refresh_token", refresh_token);
+        ObjectNode object = new ObjectMapper().createObjectNode();
+        object.put("access_token", access_token);
+        object.put("refresh_token", refresh_token);
+        object.put("expires_in", 60 * 60);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        new ObjectMapper().writeValue(response.getOutputStream(), tokens);
+        new ObjectMapper().writeValue(response.getOutputStream(), object);
     }
 }
