@@ -63,6 +63,7 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
         object.put("access_token", access_token);
         object.put("refresh_token", refresh_token);
         object.put("expires_in", 60 * 60);
+        object.put("user", user.getUsername());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         new ObjectMapper().writeValue(response.getOutputStream(), object);
     }
