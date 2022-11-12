@@ -120,6 +120,26 @@ public class PermissionRoleController {
         }
     }
 
+    @PutMapping("{permissionRoleId}/role/{roleId}")
+    PermissionRole changeRole(@PathVariable String permissionRoleId, @PathVariable String roleId) {
+        Role role = this.roleRepository.findById(roleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El rol no existe"));
+        PermissionRole permissionRole = this.permissionRoleRepository.findById(permissionRoleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El acceso no existe"));
+        permissionRole.setRole(role);
+        return permissionRoleRepository.save(permissionRole);
+    }
+
+    @PutMapping("{permissionRoleId}/permission/{permissionId}")
+    PermissionRole changePermission(@PathVariable String permissionRoleId, @PathVariable String permissionId) {
+        Permission permission = this.permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El permiso no existe"));
+        PermissionRole permissionRole = this.permissionRoleRepository.findById(permissionRoleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El acceso no existe"));
+        permissionRole.setPermission(permission);
+        return permissionRoleRepository.save(permissionRole);
+    }
+
     boolean checkIfAlreadyExists(Role role, Permission permission) {
         /*
         * Verificar si existe relación entre el rol y el permiso dado
@@ -146,7 +166,7 @@ public class PermissionRoleController {
                         permissionRole.getPermission().getUrl() + " " +
                         permissionRole.getPermission().getMethod() + " " +
                         " fue eliminado satisfactoriamente");
-        return new ResponseEntity<Object>(data, HttpStatus.ACCEPTED);
+        return new ResponseEntity<Object>(data, HttpStatus.OK);
     }
 
 
